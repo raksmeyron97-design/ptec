@@ -294,6 +294,10 @@
                             <option value="custom">កំណត់តាមចន្លោះខែ</option>
                         </select>
                     </div>
+                    <div id="div_daily_select" style="display:none;">
+                        <label class="text-sm font-bold">ជ្រើសរើសថ្ងៃ:</label>
+                        <input type="date" id="report_daily_date" class="border p-2 rounded w-full" onchange="updateReport()">
+                    </div>
                     <div id="div_single_month"><label class="text-sm font-bold">ជ្រើសរើសខែ:</label><input type="month" id="single_month_input" class="border p-2 rounded w-full" onchange="updateReport()"></div>
                     <div id="div_range_select" class="md:col-span-2 grid grid-cols-2 gap-2" style="display:none;">
                         <div><label class="text-sm font-bold">ចាប់ពីខែ:</label><input type="month" id="semester_start" class="border p-2 rounded w-full" onchange="updateReport()"></div>
@@ -434,10 +438,9 @@
         };
 
         function initApp() {
-            loadClassData(); // 1. Load data from localStorage first
-            renderClassSelector(); // 2. Update UI class names
+            loadClassData();
+            renderClassSelector();
             
-            // 3. Fill the Setup page forms with loaded data
             document.getElementById('org_name_1').value = classConfig.org1 || "";
             document.getElementById('org_name_2').value = classConfig.org2 || "";
             document.getElementById('school_name').value = classConfig.school || "";
@@ -446,12 +449,12 @@
             document.getElementById('manager_role').value = classConfig.managerRole || "";
             document.getElementById('location').value = classConfig.location || "";
             
-            // 4. Set default dates
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('attendance_date').value = today;
             document.getElementById('dash_filter_day').value = today;
             document.getElementById('dash_filter_month').value = today.substring(0, 7);
             document.getElementById('single_month_input').value = today.substring(0, 7);
+            document.getElementById('report_daily_date').value = today; // Init daily report date
             document.getElementById('semester_start').value = today.substring(0, 4) + "-10";
             document.getElementById('semester_end').value = today.substring(0, 7);
             
@@ -499,7 +502,6 @@
                 currentClassId = newId;
                 localStorage.setItem('current_class_id', currentClassId);
                 
-                // Set default config for new class
                 const newConfig = {
                     org1: "ឧ.មន្ទីរអប់រំ យុវជន និងកីឡា", org2: "ឧ.ការិយាល័យអប់រំ យុវជន និងកីឡា", school: "សាលារបស់អ្នក", 
                     className: name, teacher: "ឈ្មោះរបស់អ្នក", location: "រាជធានីភ្នំពេញ", managerRole: "នាយក"
@@ -697,6 +699,7 @@
         }
 
         function mark(uid, status) {
+            const date = document.getElementById('attendance_date').value;
             const student = students.find(s => s.uid === uid);
             if (status === 'L' || status === 'A') {
                 document.getElementById('note_uid').value = uid;
@@ -721,13 +724,20 @@
             if(!attendanceHistory[date]) attendanceHistory[date] = {};
             attendanceHistory[date][uid] = { status: status, note: note };
             
-            // Persist immediately
             localStorage.setItem(getKey('attendance_history'), JSON.stringify(attendanceHistory));
             loadAttendance();
         }
 
         function saveAttendance() { 
+            const date = document.getElementById('attendance_date').value;
+            if(!attendanceHistory[date]) attendanceHistory[date] = {};
+            students.forEach(s => {
+                if (!attendanceHistory[date][s.uid]) {
+                    attendanceHistory[date][s.uid] = { status: 'P', note: '' };
+                }
+            });
             localStorage.setItem(getKey('attendance_history'), JSON.stringify(attendanceHistory)); 
+            loadAttendance();
             alert('រក្សាទុកបានជោគជ័យ!'); 
         }
 
@@ -772,9 +782,15 @@
             const type = document.getElementById('report_type').value;
             const divRange = document.getElementById('div_range_select');
             const divSingle = document.getElementById('div_single_month');
+            const divDaily = document.getElementById('div_daily_select');
             const currentYear = new Date().getFullYear();
-            divRange.style.display = 'none'; divSingle.style.display = 'none';
-            if (type === 'monthly') divSingle.style.display = 'block';
+            
+            divRange.style.display = 'none'; 
+            divSingle.style.display = 'none'; 
+            divDaily.style.display = 'none';
+            
+            if (type === 'daily') divDaily.style.display = 'block';
+            else if (type === 'monthly') divSingle.style.display = 'block';
             else if (type === 'semester1') { divRange.style.display = 'grid'; document.getElementById('semester_start').value = (currentYear - 1) + "-10"; document.getElementById('semester_end').value = currentYear + "-03"; }
             else if (type === 'semester2') { divRange.style.display = 'grid'; document.getElementById('semester_start').value = currentYear + "-04"; document.getElementById('semester_end').value = currentYear + "-08"; }
             else if (type === 'custom') divRange.style.display = 'grid';
@@ -782,7 +798,8 @@
 
         function updateReport() {
             const type = document.getElementById('report_type').value;
-            const dailyDate = document.getElementById('attendance_date').value;
+            // Changed: get daily date from report input instead of attendance input
+            const dailyDate = document.getElementById('report_daily_date').value;
             let startM = document.getElementById('semester_start').value;
             let endM = document.getElementById('semester_end').value;
             const singleM = document.getElementById('single_month_input').value;
@@ -874,7 +891,7 @@
         function exportToExcel() {
             const type = document.getElementById('report_type').value;
             const singleM = document.getElementById('single_month_input').value;
-            const dailyDate = document.getElementById('attendance_date').value;
+            const dailyDate = document.getElementById('report_daily_date').value;
             let startM = document.getElementById('semester_start').value;
             let endM = document.getElementById('semester_end').value;
 
