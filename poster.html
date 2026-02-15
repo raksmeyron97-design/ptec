@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ជំនួយការគ្រូបង្រៀន - Poster Splitter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;700&display=swap');
+        body { font-family: 'Kantumruy Pro', sans-serif; }
+        .app-gradient { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+        .preview-container { background-color: #f8fafc; background-image: radial-gradient(#e2e8f0 1px, transparent 1px); background-size: 20px 20px; }
+        #loadingOverlay { display: none; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(4px); }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; background: #3b82f6; cursor: pointer; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+<!-- ផ្ទាំង Loading -->
+<div id="loadingOverlay" class="fixed inset-0 z-[100] flex items-center justify-center">
+    <div class="text-center bg-white p-6 rounded-3xl shadow-xl border border-slate-100">
+        <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-600 mx-auto mb-4"></div>
+        <p class="font-bold text-slate-700 text-sm">កំពុងដំណើរការ...</p>
+    </div>
+</div>
+
+<div class="max-w-[1600px] mx-auto p-4 lg:p-8">
+    
+    <!-- ផ្នែកក្បាលកម្មវិធី -->
+    <header class="mb-6 flex flex-col md:flex-row justify-between items-center bg-white p-5 rounded-[2.5rem] shadow-sm border border-slate-200 gap-4">
+        <div class="flex items-center gap-4">
+            <div class="app-gradient p-3 rounded-2xl text-white">
+                <i data-lucide="layers" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-900 uppercase tracking-tighter">បំបែកសន្លឹកកិច្ចការ Poster</h1>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Smart Scaling System for Teachers</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 text-slate-400 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
+            <i data-lucide="info" class="w-4 h-4"></i>
+            <span class="text-[11px] font-bold uppercase">បំបែករូបភាពធំ ទៅជាសន្លឹកតូចៗ</span>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- ផ្ទាំងបញ្ជា (Controls) -->
+        <aside class="lg:col-span-4 xl:col-span-3 space-y-6">
+            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-200 space-y-6">
+                
+                <!-- ១. បញ្ចូលឯកសារ -->
+                <section>
+                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-3 tracking-widest">១. បញ្ចូលឯកសារ</label>
+                    <div class="relative group">
+                        <input type="file" id="fileInput" accept=".pdf, .png, .jpg, .jpeg" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                        <div class="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center group-hover:border-blue-400 group-hover:bg-blue-50 transition-all">
+                            <i data-lucide="upload-cloud" class="w-10 h-10 text-slate-300 mx-auto mb-3"></i>
+                            <p class="text-xs font-bold text-slate-600">ចុច ឬទាញ PDF/រូបភាព</p>
+                            <p class="text-[9px] text-slate-400 mt-1 uppercase">Supports A0, A1, A2 projects</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ២. ការកំណត់ក្រដាស -->
+                <section class="space-y-4 pt-2">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase mb-2 tracking-widest">២. ជ្រើសរើសក្រដាសបោះពុម្ព</label>
+                        <select id="paperInHand" onchange="updateState()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-100">
+                            <option value="a4">ខ្ញុំមានក្រដាស A4</option>
+                            <option value="a3">ខ្ញុំមានក្រដាស A3</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase mb-2 tracking-widest">៣. ចង់បាន Poster ខ្នាត (Target)</label>
+                        <select id="targetSize" onchange="updateState()" class="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs font-black text-blue-700 outline-none">
+                            <option value="a0">បោះពុម្ពជាខ្នាត A0</option>
+                            <option value="a1">បោះពុម្ពជាខ្នាត A1</option>
+                            <option value="a2">បោះពុម្ពជាខ្នាត A2</option>
+                            <option value="a3">បោះពុម្ពជាខ្នាត A3</option>
+                            <option value="custom">កំណត់ចំនួនសន្លឹកដោយខ្លួនឯង</option>
+                        </select>
+                    </div>
+                </section>
+
+                <!-- Custom Grid (បង្ហាញតែពេលជ្រើសរើស Custom) -->
+                <div id="customGrid" class="hidden grid grid-cols-2 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div class="space-y-1">
+                        <span class="text-[9px] font-bold text-slate-400 uppercase ml-1">ទទឹង (សន្លឹក)</span>
+                        <input type="number" id="customCols" value="2" min="1" oninput="updateState()" class="w-full p-2 border rounded-lg text-center font-bold text-xs outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <span class="text-[9px] font-bold text-slate-400 uppercase ml-1">កម្ពស់ (សន្លឹក)</span>
+                        <input type="number" id="customRows" value="2" min="1" oninput="updateState()" class="w-full p-2 border rounded-lg text-center font-bold text-xs outline-none">
+                    </div>
+                </div>
+
+                <!-- ៣. ការកំណត់គែម -->
+                <div class="pt-4 border-t border-slate-100 space-y-5">
+                    <div>
+                        <div class="flex justify-between text-[10px] font-bold mb-2 uppercase text-slate-500">
+                            <span>កាត់គែមសន្លឹក (Margin)</span> <span id="marginVal" class="text-blue-600">10mm</span>
+                        </div>
+                        <input type="range" id="marginInput" min="0" max="30" value="10" oninput="updateState()" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] font-bold mb-2 uppercase text-slate-500">
+                            <span>គែមជាន់គ្នា (Overlap)</span> <span id="overlapVal" class="text-blue-600">5mm</span>
+                        </div>
+                        <input type="range" id="overlapInput" min="0" max="25" value="5" oninput="updateState()" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                    </div>
+                </div>
+
+                <button id="generateBtn" class="w-full py-4 bg-blue-600 text-white rounded-[1.5rem] font-black shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-[0.98] flex items-center justify-center gap-3">
+                    <i data-lucide="download"></i> ទាញយក PDF សម្រាប់បោះពុម្ព
+                </button>
+            </div>
+        </aside>
+
+        <!-- កន្លែងបង្ហាញលទ្ធផល (Preview) -->
+        <main class="lg:col-span-8 xl:col-span-9">
+            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-200 h-full min-h-[650px] flex flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                        <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span> មើលលទ្ធផលសាកល្បង (Preview)
+                    </h2>
+                    <div class="flex gap-2">
+                        <button id="rotateBtn" class="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all text-slate-600 text-[11px] font-bold border border-slate-200">
+                            <i data-lucide="rotate-cw" class="w-4 h-4"></i> បង្វិលរូបភាព
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="previewArea" class="preview-container flex-grow border-2 border-dashed border-slate-100 rounded-[2rem] flex items-center justify-center overflow-auto p-12 relative">
+                    <canvas id="previewCanvas" class="hidden shadow-2xl bg-white"></canvas>
+                    <div id="placeholder" class="text-center opacity-30 select-none">
+                        <i data-lucide="image" class="w-16 h-16 mx-auto mb-4 text-slate-300"></i>
+                        <p class="font-bold uppercase text-[10px] tracking-[0.3em] text-slate-500">សូមបញ្ចូលឯកសារដើម្បីចាប់ផ្តើម</p>
+                    </div>
+                </div>
+                
+                <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">ទំហំសរុប</p>
+                        <p id="statSize" class="text-xs font-black text-slate-700">-</p>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">ចំនួនសន្លឹក</p>
+                        <p id="statSheets" class="text-xs font-black text-slate-700">-</p>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">ទិសដៅក្រដាស</p>
+                        <p id="statOrient" class="text-xs font-black text-slate-700">-</p>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase mb-1">គែមជាន់គ្នា</p>
+                        <p id="statOverlap" class="text-xs font-black text-slate-700">-</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // PDF.js Configuration
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const { jsPDF } = window.jspdf;
+    
+    // Application State
+    let posterState = { 
+        img: null, 
+        originalImg: null, 
+        rotation: 0, 
+        paperType: 'a4', 
+        paperW: 210, 
+        paperH: 297, 
+        orientation: 'p', 
+        cols: 1, 
+        rows: 1, 
+        margin: 10, 
+        overlap: 5, 
+        totalW: 0, 
+        totalH: 0 
+    };
+
+    const SIZES = { 
+        a4: [210, 297], 
+        a3: [297, 420], 
+        a2: [420, 594], 
+        a1: [594, 841], 
+        a0: [841, 1189] 
+    };
+
+    function updateState() {
+        const inHand = document.getElementById('paperInHand').value;
+        const target = document.getElementById('targetSize').value;
+        posterState.paperType = inHand;
+        
+        if (target !== 'custom') {
+            document.getElementById('customGrid').classList.add('hidden');
+            // Logic for auto calculating grid based on standard sizes
+            if (inHand === 'a4' && target === 'a3') { posterState.cols = 1; posterState.rows = 2; posterState.orientation = 'l'; }
+            else if (inHand === 'a4' && target === 'a2') { posterState.cols = 2; posterState.rows = 2; posterState.orientation = 'p'; }
+            else if (inHand === 'a4' && target === 'a1') { posterState.cols = 2; posterState.rows = 4; posterState.orientation = 'l'; }
+            else if (inHand === 'a4' && target === 'a0') { posterState.cols = 4; posterState.rows = 4; posterState.orientation = 'p'; }
+            else if (inHand === 'a3' && target === 'a2') { posterState.cols = 1; posterState.rows = 2; posterState.orientation = 'l'; }
+            else if (inHand === 'a3' && target === 'a1') { posterState.cols = 2; posterState.rows = 2; posterState.orientation = 'p'; }
+            else if (inHand === 'a3' && target === 'a0') { posterState.cols = 2; posterState.rows = 4; posterState.orientation = 'l'; }
+            else { posterState.cols = 1; posterState.rows = 1; posterState.orientation = 'p'; }
+        } else {
+            document.getElementById('customGrid').classList.remove('hidden');
+            posterState.cols = parseInt(document.getElementById('customCols').value) || 1;
+            posterState.rows = parseInt(document.getElementById('customRows').value) || 1;
+            posterState.orientation = 'p'; 
+        }
+
+        const base = SIZES[inHand];
+        if (posterState.orientation === 'p') { posterState.paperW = base[0]; posterState.paperH = base[1]; }
+        else { posterState.paperW = base[1]; posterState.paperH = base[0]; }
+
+        posterState.margin = parseInt(document.getElementById('marginInput').value);
+        posterState.overlap = parseInt(document.getElementById('overlapInput').value);
+        
+        document.getElementById('marginVal').innerText = posterState.margin + 'mm';
+        document.getElementById('overlapVal').innerText = posterState.overlap + 'mm';
+
+        const usableW = posterState.paperW - (posterState.margin * 2);
+        const usableH = posterState.paperH - (posterState.margin * 2);
+        posterState.totalW = (posterState.cols * usableW) - ((posterState.cols - 1) * posterState.overlap);
+        posterState.totalH = (posterState.rows * usableH) - ((posterState.rows - 1) * posterState.overlap);
+
+        // Update Stats UI
+        document.getElementById('statSize').innerText = `${Math.round(posterState.totalW)} x ${Math.round(posterState.totalH)} mm`;
+        document.getElementById('statSheets').innerText = `${posterState.cols * posterState.rows} សន្លឹក (${posterState.cols}x${posterState.rows})`;
+        document.getElementById('statOrient').innerText = posterState.orientation === 'p' ? 'បញ្ឈរ (Portrait)' : 'ផ្តេក (Landscape)';
+        document.getElementById('statOverlap').innerText = posterState.overlap + ' mm';
+
+        drawPosterPreview();
+    }
+
+    function drawPosterPreview() {
+        const canvas = document.getElementById('previewCanvas');
+        if (!canvas || !posterState.img) return;
+        const ctx = canvas.getContext('2d');
+        
+        document.getElementById('placeholder').classList.add('hidden');
+        canvas.classList.remove('hidden');
+        
+        const container = document.getElementById('previewArea');
+        const scale = Math.min((container.clientWidth - 100) / posterState.totalW, (container.clientHeight - 100) / posterState.totalH);
+        
+        canvas.width = posterState.totalW * scale; 
+        canvas.height = posterState.totalH * scale;
+        
+        ctx.fillStyle = "white"; 
+        ctx.fillRect(0,0, canvas.width, canvas.height);
+        ctx.drawImage(posterState.img, 0, 0, canvas.width, canvas.height);
+        
+        // Draw Grid Overlay
+        const tileW = (posterState.paperW - posterState.margin * 2) * scale;
+        const tileH = (posterState.paperH - posterState.margin * 2) * scale;
+        const overlapPx = posterState.overlap * scale;
+
+        for(let i=0; i<posterState.cols; i++) {
+            for(let j=0; j<posterState.rows; j++) {
+                const x = i * (tileW - overlapPx); 
+                const y = j * (tileH - overlapPx);
+                ctx.strokeStyle = "rgba(59, 130, 246, 0.5)"; 
+                ctx.setLineDash([8, 4]);
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, y, tileW, tileH);
+                
+                // Sheet highlighting
+                ctx.fillStyle = "rgba(59, 130, 246, 0.1)";
+                ctx.fillRect(x, y, tileW, tileH);
+            }
+        }
+    }
+
+    // Handle File Input
+    document.getElementById('fileInput').onchange = async (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        
+        try {
+            if (file.type === 'application/pdf') {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const page = await pdf.getPage(1);
+                const viewport = page.getViewport({ scale: 2.0 });
+                const canv = document.createElement('canvas');
+                const context = canv.getContext('2d');
+                canv.width = viewport.width; canv.height = viewport.height;
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                
+                posterState.originalImg = new Image();
+                posterState.originalImg.onload = () => { 
+                    posterState.img = posterState.originalImg; 
+                    updateState(); 
+                    document.getElementById('loadingOverlay').style.display = 'none'; 
+                };
+                posterState.originalImg.src = canv.toDataURL('image/jpeg', 0.95);
+            } else {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    posterState.originalImg = new Image();
+                    posterState.originalImg.onload = () => { 
+                        posterState.img = posterState.originalImg; 
+                        updateState(); 
+                        document.getElementById('loadingOverlay').style.display = 'none'; 
+                    };
+                    posterState.originalImg.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        } catch (err) { 
+            console.error(err); 
+            document.getElementById('loadingOverlay').style.display = 'none'; 
+        }
+    };
+
+    // Rotate Logic
+    document.getElementById('rotateBtn').onclick = () => {
+        if (!posterState.img) return;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = posterState.img.height;
+        canvas.height = posterState.img.width;
+        ctx.translate(canvas.width/2, canvas.height/2);
+        ctx.rotate(90 * Math.PI / 180);
+        ctx.drawImage(posterState.img, -posterState.img.width/2, -posterState.img.height/2);
+        
+        const newImg = new Image();
+        newImg.onload = () => {
+            posterState.img = newImg;
+            updateState();
+        };
+        newImg.src = canvas.toDataURL();
+    };
+
+    // PDF Generation Logic
+    document.getElementById('generateBtn').onclick = () => {
+        if (!posterState.img) return;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        
+        setTimeout(() => {
+            const doc = new jsPDF({ 
+                orientation: posterState.orientation, 
+                unit: 'mm', 
+                format: [posterState.paperW, posterState.paperH] 
+            });
+
+            const usableW = posterState.paperW - posterState.margin*2;
+            const usableH = posterState.paperH - posterState.margin*2;
+            const stepX = usableW - posterState.overlap;
+            const stepY = usableH - posterState.overlap;
+
+            for(let r=0; r<posterState.rows; r++) {
+                for(let c=0; c<posterState.cols; c++) {
+                    if (r>0 || c>0) doc.addPage([posterState.paperW, posterState.paperH], posterState.orientation);
+                    
+                    const posX = posterState.margin - (c * stepX);
+                    const posY = posterState.margin - (r * stepY);
+                    
+                    // Add full image with clipping offset
+                    doc.addImage(posterState.img, 'JPEG', posX, posY, posterState.totalW, posterState.totalH);
+                    
+                    // Create visual margin "mask" for clean output
+                    doc.setFillColor(255,255,255);
+                    doc.rect(0, 0, posterState.paperW, posterState.margin, 'F');
+                    doc.rect(0, posterState.paperH - posterState.margin, posterState.paperW, posterState.margin, 'F');
+                    doc.rect(0, 0, posterState.margin, posterState.paperH, 'F');
+                    doc.rect(posterState.paperW - posterState.margin, 0, posterState.margin, posterState.paperH, 'F');
+                    
+                    // Add page number for assembly reference
+                    doc.setFontSize(8);
+                    doc.setTextColor(200, 200, 200);
+                    doc.text(`Sheet ${r * posterState.cols + c + 1} (${c+1},${r+1})`, posterState.margin + 2, posterState.paperH - (posterState.margin / 2));
+                }
+            }
+            doc.save(`TeacherHub_Split_Poster.pdf`);
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }, 500);
+    };
+
+    // Initial State
+    updateState();
+</script>
+</body>
+</html>

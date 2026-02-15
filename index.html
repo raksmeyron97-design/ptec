@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTEC - ជំនួយការគ្រូបង្រៀនឌីជីថល</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;700&family=Moul&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root { --primary: #0054a6; --secondary: #3b82f6; --accent: #f59e0b; }
+        body { font-family: 'Kantumruy Pro', sans-serif; background: #f0f4f8; min-height: 100vh; overflow-x: hidden; }
+        .kh-moul { font-family: 'Moul', cursive; }
+        .bg-animate { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: radial-gradient(circle at 10% 20%, #e0e7ff 0%, transparent 40%), radial-gradient(circle at 90% 80%, #dcfce7 0%, transparent 40%), radial-gradient(circle at 50% 50%, #fef3c7 0%, transparent 50%); animation: moveBg 20s infinite alternate ease-in-out; }
+        @keyframes moveBg { from { transform: scale(1) rotate(0deg); } to { transform: scale(1.1) rotate(2deg); } }
+        .card-3d { background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 2rem; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); position: relative; transform-style: preserve-3d; perspective: 1000px; cursor: pointer; }
+        .card-3d:hover { transform: translateY(-10px); background: rgba(255, 255, 255, 0.95); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05); }
+        .icon-3d { filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.1)); transition: all 0.4s ease; transform: translateZ(30px); }
+        @keyframes float { 0% { transform: translateY(0px) translateZ(30px); } 50% { transform: translateY(-8px) translateZ(30px); } 100% { transform: translateY(0px) translateZ(30px); } }
+        .floating-icon { animation: float 4s infinite ease-in-out; }
+        .header-content-wrapper { max-width: 650px; margin: 0 auto; width: 100%; }
+        .nav-item { position: relative; color: #1e3a8a; font-weight: 600; cursor: pointer; }
+        .nav-item::after { content: ''; position: absolute; bottom: -5px; left: 50%; width: 0; height: 3px; background: var(--primary); transition: all 0.3s ease; transform: translateX(-50%); border-radius: 10px; }
+        .nav-item:hover::after { width: 100%; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); }
+        .modal-content { background: white; margin: 5% auto; padding: 25px; border-radius: 20px; width: 90%; max-width: 700px; max-height: 85vh; overflow-y: auto; }
+        .app-icon-container { width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 1.5rem; position: relative; }
+        .app-icon-container img { width: 100%; height: 100%; object-fit: cover; }
+        .app-desc-text { white-space: pre-line; }
+
+        #authModal .modal-content { max-width: 350px; text-align: center; }
+        .pass-input { letter-spacing: 0.5em; text-align: center; font-size: 1.5rem; font-weight: bold; }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="bg-animate"></div>
+
+    <nav class="sticky top-0 z-50 px-8 py-3 bg-white/70 backdrop-blur-md border-b border-white/40 shadow-sm">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <img src="https://www.ptec.edu.kh/wp-content/uploads/2020/06/cropped-PTEC_Banner-2048x459.png" alt="PTEC Logo" class="h-10 md:h-12 w-auto">
+            <div class="hidden md:flex space-x-8 text-sm font-bold uppercase items-center">
+                <a href="#" class="nav-item">ទំព័រដើម</a>
+                <a href="#apps" class="nav-item">កម្មវិធី</a>
+                <!-- ប្ដូរមកជា "គេហទំព័រ" តាមការស្នើសុំ -->
+                <a href="https://www.ptec.edu.kh/" target="_blank" class="nav-item flex items-center gap-1">
+                    គេហទំព័រ
+                    <i data-lucide="external-link" class="w-3 h-3"></i>
+                </a>
+                <button onclick="checkAuth()" class="nav-item opacity-0">ADMIN</button>
+            </div>
+        </div>
+    </nav>
+
+    <header class="pt-12 pb-12 px-6 text-center">
+        <div class="header-content-wrapper">
+            <div class="mb-8">
+                <img src="https://www.ptec.edu.kh/wp-content/uploads/2020/06/cropped-PTEC_Banner-2048x459.png" alt="PTEC Banner" class="w-full h-auto drop-shadow-xl" loading="eager">
+            </div>
+            <h1 id="dash-title" class="kh-moul text-3xl md:text-4xl text-[#0054a6] mb-6 leading-relaxed">ប្រព័ន្ធជំនួយការគ្រូបង្រៀនឌីជីថល</h1>
+            <p id="dash-desc" class="text-[#0054a6]/80 text-lg md:text-xl leading-relaxed font-semibold app-desc-text"></p>
+        </div>
+    </header>
+
+    <main id="apps" class="max-w-7xl mx-auto px-6 py-4 pb-24">
+        <div id="app-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <!-- Apps Injected Here -->
+        </div>
+    </main>
+
+    <!-- Modal សួរលេខកូដ -->
+    <div id="authModal" class="modal">
+        <div class="modal-content shadow-2xl">
+            <h2 class="kh-moul text-lg text-[#0054a6] mb-4">បញ្ជាក់អត្តសញ្ញាណ</h2>
+            <p class="text-xs mb-4 text-gray-500">សូមបញ្ចូលលេខកូដសម្ងាត់ដើម្បីបន្ត</p>
+            <input id="admin-passcode" type="password" class="w-full p-3 border-2 border-blue-100 rounded-xl mb-4 pass-input focus:border-blue-500 outline-none" placeholder="••••">
+            <div class="flex gap-2">
+                <button onclick="verifyPasscode()" class="flex-1 bg-blue-600 text-white py-2 rounded-xl font-bold">យល់ព្រម</button>
+                <button onclick="closeAuth()" class="flex-1 bg-gray-100 py-2 rounded-xl font-bold">បោះបង់</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Modal -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="kh-moul text-xl text-[#0054a6]">គ្រប់គ្រងប្រព័ន្ធ</h2>
+                <button onclick="closeAdmin()" class="p-2 hover:bg-gray-100 rounded-full"><i data-lucide="x"></i></button>
+            </div>
+            <div class="space-y-4 text-sm">
+                <div class="p-4 bg-blue-50 rounded-xl">
+                    <h3 class="font-bold mb-2">កែប្រែ Dashboard</h3>
+                    <input id="input-title" type="text" placeholder="ចំណងជើងធំ" class="w-full p-2 mb-2 border rounded">
+                    <textarea id="input-desc" placeholder="អត្ថបទពណ៌នា (អាចចុះបន្ទាត់បាន)" class="w-full p-2 border rounded h-24"></textarea>
+                    <button onclick="saveDashConfig()" class="w-full mt-1 bg-blue-600 text-white py-1.5 rounded font-bold text-xs">រក្សាទុកការផ្លាស់ប្តូរ Dashboard</button>
+                </div>
+
+                <div class="p-4 bg-emerald-50 rounded-xl border-2 border-emerald-100">
+                    <h3 id="form-mode-title" class="font-bold mb-2">បន្ថែម/កែប្រែកម្មវិធី</h3>
+                    <input id="edit-id" type="hidden">
+                    <input id="app-name" type="text" placeholder="ឈ្មោះកម្មវិធី" class="w-full p-2 mb-2 border rounded">
+                    <textarea id="app-desc" placeholder="ការពណ៌នាសង្ខេប (អាចចុះបន្ទាត់បាន)" class="w-full p-2 mb-2 border rounded h-20"></textarea>
+                    
+                    <div class="flex flex-col gap-2 mb-2">
+                        <div class="flex gap-2">
+                            <select id="app-icon-select" onchange="document.getElementById('app-icon-url').value = this.value" class="flex-1 p-2 border rounded bg-white">
+                                <option value="">-- Icon --</option>
+                                <option value="wand-2">Magic Wand</option>
+                                <option value="check-square">Checklist</option>
+                                <option value="scale">Scale</option>
+                                <option value="layout-grid">Grid</option>
+                                <option value="book-open">Library</option>
+                                <option value="brain">AI / Brain</option>
+                                <option value="calculator">Calculator</option>
+                                <option value="calendar">Calendar</option>
+                            </select>
+                            <select id="app-color" class="w-1/3 p-2 border rounded bg-white">
+                                <optgroup label="ពណ៌ចម្រុះ">
+                                    <option value="from-indigo-500 to-purple-600">ស្វាយ</option>
+                                    <option value="from-emerald-400 to-teal-600">បៃតង</option>
+                                    <option value="from-amber-400 to-orange-500">លឿងទុំ</option>
+                                    <option value="from-blue-400 to-indigo-600">ខៀវ</option>
+                                    <option value="from-rose-400 to-red-600">ក្រហម</option>
+                                    <option value="from-pink-500 to-rose-500">ផ្កាឈូក</option>
+                                    <option value="from-cyan-400 to-blue-500">ខៀវផ្ទៃមេឃ</option>
+                                    <option value="from-slate-700 to-slate-900">ខ្មៅប្រផេះ</option>
+                                    <option value="from-orange-500 to-yellow-400">មាស</option>
+                                    <option value="from-violet-500 to-fuchsia-500">ស្វាយស្រស់</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <input id="app-icon-url" type="text" placeholder="Icon URL (Optional)" class="w-full p-2 border rounded">
+                    </div>
+
+                    <textarea id="app-html" placeholder="បិទភ្ជាប់កូដ HTML ទាំងមូល" class="w-full p-2 border rounded h-32 font-mono text-xs bg-white"></textarea>
+                    <div class="flex gap-2 mt-2">
+                        <button id="btn-save-app" onclick="saveApp()" class="flex-1 bg-emerald-600 text-white py-2 rounded font-bold hover:bg-emerald-700">រក្សាទុក</button>
+                        <button id="btn-cancel-edit" onclick="resetForm()" class="hidden px-4 bg-gray-400 text-white py-2 rounded font-bold">បោះបង់</button>
+                    </div>
+                </div>
+                <div id="manage-list" class="space-y-2 max-h-52 overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center py-10 border-t border-white/40">
+        <div class="flex flex-col items-center gap-4">
+            <img id="footer-logo" src="https://www.ptec.edu.kh/wp-content/uploads/2020/06/cropped-PTEC_Banner-2048x459.png" class="h-8 opacity-40 cursor-pointer transition hover:opacity-100">
+            <div class="text-[10px] text-slate-400 font-medium uppercase tracking-widest">&copy; 2026 វិទ្យាស្ថានគរុកោសល្យរាជធានីភ្នំពេញ</div>
+        </div>
+    </footer>
+
+    <script>
+        const ADMIN_PIN = "P565";
+
+        const initialDefaultApps = [
+            { id: 'core-1', name: 'Magic Picker', desc: 'ចាប់ឈ្មោះសិស្សដោយចៃដន្យជាមួយចលនា 3D ទាក់ទាញ។', icon: 'wand-2', url: 'MagicBox.html', color: 'from-indigo-500 to-purple-600', isCore: true },
+            { id: 'core-2', name: 'ប្រព័ន្ធវត្តមាន', desc: 'គ្រប់គ្រងវត្តមាន និងផលិតរបាយការណ៍ PDF បានរហ័ស។', icon: 'check-square', url: 'attendance.html', color: 'from-emerald-400 to-teal-600', isCore: true },
+            { id: 'core-3', name: 'កម្មវិធីរចនាជញ្ជីង', desc: 'បង្កើតរូបភាពជញ្ជីង កំណត់គីឡូ និងក្រាមសម្រាប់មេរៀន STEM។', icon: 'scale', url: 'scale.html', color: 'from-amber-400 to-orange-500', isCore: true },
+            { id: 'core-4', name: 'Poster Splitter', desc: 'បំបែករូបភាពធំៗជាសន្លឹក A4/A3 សម្រាប់តុបតែងថ្នាក់រៀន។', icon: 'layout-grid', url: 'poster.html', color: 'from-blue-400 to-indigo-600', isCore: true }
+        ];
+
+        let customApps = JSON.parse(localStorage.getItem('ptec_custom_apps')) || [];
+        let editedCoreApps = JSON.parse(localStorage.getItem('ptec_edited_core')) || [];
+        
+        let dashConfig = JSON.parse(localStorage.getItem('ptec_dash_config')) || {
+            title: "ប្រព័ន្ធជំនួយការគ្រូបង្រៀនឌីជីថល",
+            desc: "លើកកម្ពស់សក្តានុពលនៃការបង្រៀន និងរៀនតាមបែបឌីជីថល \n ដើម្បីកសាងមូលដ្ឋានគ្រឹះអប់រំឱ្យកាន់តែរឹងមាំ ប្រកបដោយភាពច្នៃប្រឌិត និងវិជ្ជាជីវៈខ្ពស់។"
+        };
+
+        function getActiveApps() {
+            const apps = initialDefaultApps.map(core => {
+                const edited = editedCoreApps.find(e => e.id === core.id);
+                return edited ? { ...core, ...edited } : core;
+            });
+            return [...apps, ...customApps];
+        }
+
+        function renderDashboard() {
+            document.getElementById('dash-title').innerText = dashConfig.title;
+            document.getElementById('dash-desc').innerText = dashConfig.desc;
+            const grid = document.getElementById('app-grid');
+            grid.innerHTML = '';
+            
+            getActiveApps().forEach(app => {
+                const card = document.createElement('div');
+                card.className = 'card-3d group p-8 flex flex-col items-center text-center';
+                card.onclick = () => {
+                    if (app.isCore) { window.location.href = app.url; } 
+                    else if (app.htmlContent) {
+                        const newWin = window.open("", "_blank");
+                        if (newWin) { newWin.document.write(app.htmlContent); newWin.document.close(); }
+                    }
+                };
+
+                let iconContent = (app.icon && app.icon.startsWith('http')) 
+                    ? `<img src="${app.icon}">` 
+                    : `<i data-lucide="${app.icon || 'plus-circle'}" class="w-10 h-10 text-white"></i>`;
+                
+                card.innerHTML = `
+                    <div class="icon-3d floating-icon mb-8">
+                        <div class="app-icon-container bg-gradient-to-tr ${app.color} shadow-lg">${iconContent}</div>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-800 mb-3">${app.name}</h3>
+                    <p class="text-slate-500 text-xs leading-relaxed mb-6 app-desc-text">${app.desc}</p>
+                    <div class="mt-auto px-5 py-2 ${app.isCore ? 'bg-[#0054a6]' : 'bg-emerald-600'} text-white rounded-xl text-[10px] font-bold uppercase tracking-wider">បើកដំណើរការ</div>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        let clickCount = 0, lastClickTime = 0;
+        document.getElementById('footer-logo').onclick = () => {
+            const now = Date.now();
+            if (now - lastClickTime > 2000) clickCount = 0;
+            clickCount++;
+            lastClickTime = now;
+            if (clickCount >= 3) { checkAuth(); clickCount = 0; }
+        };
+
+        function checkAuth() {
+            document.getElementById('authModal').style.display = 'block';
+            document.getElementById('admin-passcode').value = '';
+            document.getElementById('admin-passcode').focus();
+        }
+
+        function closeAuth() { document.getElementById('authModal').style.display = 'none'; }
+
+        function verifyPasscode() {
+            const val = document.getElementById('admin-passcode').value;
+            if (val === ADMIN_PIN) {
+                closeAuth();
+                openAdmin();
+            } else {
+                alert("លេខកូដមិនត្រឹមត្រូវ!");
+            }
+        }
+
+        document.getElementById('admin-passcode').onkeypress = (e) => {
+            if (e.key === 'Enter') verifyPasscode();
+        }
+
+        function openAdmin() {
+            document.getElementById('adminModal').style.display = 'block';
+            document.getElementById('input-title').value = dashConfig.title;
+            document.getElementById('input-desc').value = dashConfig.desc;
+            renderManageList();
+        }
+
+        function closeAdmin() { document.getElementById('adminModal').style.display = 'none'; resetForm(); }
+
+        function renderManageList() {
+            const list = document.getElementById('manage-list');
+            list.innerHTML = '<h3 class="font-bold border-b pb-1 text-slate-600">គ្រប់គ្រងកម្មវិធី</h3>';
+            getActiveApps().forEach(app => {
+                list.innerHTML += `
+                    <div class="flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-100 mb-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${app.isCore ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}">${app.isCore ? 'App ដើម' : 'App ថ្មី'}</span>
+                            <span class="text-xs font-semibold">${app.name}</span>
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="editApp('${app.id}')" class="text-blue-500 text-xs font-bold hover:underline">កែប្រែ</button>
+                            ${!app.isCore ? `<button onclick="deleteApp('${app.id}')" class="text-red-500 text-xs font-bold hover:underline">លុប</button>` : ''}
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function editApp(id) {
+            const app = getActiveApps().find(a => a.id === id);
+            if (!app) return;
+            document.getElementById('form-mode-title').innerText = "កែប្រែ៖ " + app.name;
+            document.getElementById('edit-id').value = app.id;
+            document.getElementById('app-name').value = app.name;
+            document.getElementById('app-desc').value = app.desc;
+            document.getElementById('app-icon-url').value = app.icon || "";
+            document.getElementById('app-color').value = app.color;
+            document.getElementById('app-html').value = app.htmlContent || "";
+            document.getElementById('app-html').disabled = app.isCore;
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+            document.getElementById('btn-save-app').innerText = "រក្សាទុកការកែប្រែ";
+        }
+
+        function resetForm() {
+            document.getElementById('form-mode-title').innerText = "បន្ថែម/កែប្រែកម្មវិធី";
+            document.getElementById('edit-id').value = "";
+            document.getElementById('app-name').value = "";
+            document.getElementById('app-desc').value = "";
+            document.getElementById('app-icon-url').value = "";
+            document.getElementById('app-html').value = "";
+            document.getElementById('app-html').disabled = false;
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+            document.getElementById('btn-save-app').innerText = "រក្សាទុក";
+        }
+
+        function saveApp() {
+            const id = document.getElementById('edit-id').value;
+            const name = document.getElementById('app-name').value;
+            const desc = document.getElementById('app-desc').value;
+            const icon = document.getElementById('app-icon-url').value || document.getElementById('app-icon-select').value;
+            const color = document.getElementById('app-color').value;
+            const html = document.getElementById('app-html').value;
+
+            if(!name) return alert("សូមបំពេញឈ្មោះ!");
+
+            if (id && id.startsWith('core-')) {
+                const index = editedCoreApps.findIndex(e => e.id === id);
+                const data = { id, name, desc, icon, color };
+                if (index > -1) editedCoreApps[index] = data; else editedCoreApps.push(data);
+                localStorage.setItem('ptec_edited_core', JSON.stringify(editedCoreApps));
+            } else if (id) {
+                const index = customApps.findIndex(a => a.id === id);
+                customApps[index] = { ...customApps[index], name, desc, icon, color, htmlContent: html };
+                localStorage.setItem('ptec_custom_apps', JSON.stringify(customApps));
+            } else {
+                if(!html) return alert("សូមបិទភ្ជាប់កូដ!");
+                customApps.push({ id: 'custom-' + Date.now(), name, desc, icon, color, htmlContent: html, isCore: false });
+                localStorage.setItem('ptec_custom_apps', JSON.stringify(customApps));
+            }
+            renderDashboard(); renderManageList(); resetForm(); alert("រួចរាល់!");
+        }
+
+        function saveDashConfig() {
+            dashConfig.title = document.getElementById('input-title').value;
+            dashConfig.desc = document.getElementById('input-desc').value;
+            localStorage.setItem('ptec_dash_config', JSON.stringify(dashConfig));
+            renderDashboard(); alert("រក្សាទុកជោគជ័យ!");
+        }
+
+        function deleteApp(id) {
+            if(confirm("តើអ្នកចង់លុបមែនទេ?")) {
+                customApps = customApps.filter(a => a.id !== id);
+                localStorage.setItem('ptec_custom_apps', JSON.stringify(customApps));
+                renderManageList(); renderDashboard();
+            }
+        }
+
+        window.onclick = (e) => { if (e.target.className === 'modal') { closeAdmin(); closeAuth(); } }
+        window.onload = renderDashboard;
+    </script>
+</body>
+</html>

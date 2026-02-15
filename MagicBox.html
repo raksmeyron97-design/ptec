@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Magic Student Picker 3D - Pro Wand V4</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f0c29;
+            --box-size: 200px;
+            --lid-h: 30px; 
+            --lid-w: calc(var(--box-size) + 12px);
+            --primary-main: #2980b9;
+            --primary-bright: #3498db;
+            --primary-shadow: #1e3799;
+            --primary-deep: #0c2461;
+            --box-glow: #3498db;
+            --bg-blur: 8px;
+        }
+
+        @media (max-width: 768px) {
+            :root { --box-size: 160px; --lid-h: 25px; --lid-w: calc(var(--box-size) + 10px); }
+        }
+
+        body {
+            font-family: 'Kantumruy Pro', sans-serif;
+            background-color: var(--bg-color);
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: white;
+            margin: 0;
+            overflow: hidden;
+            transition: background 0.8s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        #starsContainer { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+        .star { position: absolute; background: white; border-radius: 50%; opacity: 0.5; animation: twinkle var(--duration) infinite; }
+        @keyframes twinkle { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } }
+
+        #appTitle { transition: all 0.3s ease; }
+        #appTitle.holding {
+            text-shadow: 0 0 20px #facc15, 0 0 40px #facc15, 0 0 60px rgba(250, 204, 21, 0.5);
+            transform: scale(1.05);
+            color: #fff;
+        }
+
+        .menu-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(15px);
+            z-index: 2000; transform: translateX(100%); transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .menu-overlay.active { transform: translateX(0); }
+        
+        .top-nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            padding: 1.5rem; display: flex; justify-content: flex-end; align-items: center; gap: 12px;
+        }
+        
+        .nav-btn {
+            width: 48px; height: 48px; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.2); transform: translateY(-2px); }
+
+        .hamburger { gap: 5px; }
+        .hamburger div { width: 25px; height: 3px; background: white; border-radius: 5px; transition: 0.3s; }
+
+        .right-box-panel {
+            position: absolute; right: 2rem; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 1.2rem;
+            background: rgba(0, 0, 0, 0.2); padding: 1.5rem 0.8rem; border-radius: 40px;
+            backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 150; transition: 0.5s;
+        }
+
+        .left-blur-panel {
+            position: absolute; left: 2rem; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+            background: rgba(0, 0, 0, 0.2); padding: 1.5rem 0.5rem; border-radius: 40px;
+            backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 150; transition: 0.5s;
+        }
+
+        .blur-slider {
+            writing-mode: bt-lr;
+            -webkit-appearance: slider-vertical;
+            width: 8px; height: 150px; cursor: pointer;
+        }
+
+        .box-swatch { 
+            width: 32px; height: 32px; border-radius: 12px; cursor: pointer; 
+            border: 2px solid rgba(255,255,255,0.1); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+        .box-swatch.selected { border-color: white; transform: scale(1.25) rotate(45deg); border-radius: 10px; }
+        .color-wheel-btn { background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red); }
+
+        #wandThreeContainer { position: fixed; inset: 0; pointer-events: none; z-index: 3000; display: none; }
+
+        .magic-orb {
+            position: absolute; border-radius: 50%; pointer-events: none;
+            background: #fff; z-index: 2500;
+        }
+
+        .magic-area {
+            perspective: 2000px; width: 100%; height: 500px;
+            display: flex; justify-content: center; align-items: center; position: relative;
+            transform-style: preserve-3d;
+        }
+
+        .scene {
+            position: relative; width: var(--box-size); height: var(--box-size);
+            transform-style: preserve-3d;
+            transform: rotateX(-22deg) rotateY(45deg);
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer; z-index: 20;
+        }
+
+        .scene.glow-active .face {
+            box-shadow: inset 0 0 20px var(--box-glow), 0 0 40px var(--box-glow);
+        }
+
+        .scene.magic-spin { animation: hyperSpin 3.5s cubic-bezier(0.1, 0, 0.2, 1) forwards; }
+        @keyframes hyperSpin { 
+            0% { transform: rotateX(-22deg) rotateY(45deg); }
+            100% { transform: rotateX(-22deg) rotateY(1845deg); }
+        }
+
+        .scene.rotating { animation: idleSpin 20s infinite linear; }
+        @keyframes idleSpin { from { transform: rotateX(-22deg) rotateY(0deg); } to { transform: rotateX(-22deg) rotateY(360deg); } }
+
+        .box-body { position: absolute; width: 100%; height: 100%; transform-style: preserve-3d; }
+        .face { position: absolute; width: 101%; height: 101%; backface-visibility: visible; box-shadow: inset 0 0 30px rgba(0,0,0,0.5); border: 1px solid rgba(255, 255, 255, 0.5) ; transition: background 0.6s, box-shadow 0.6s; }
+        
+        .f-front  { transform: translateZ(calc(var(--box-size) / 2)); background: linear-gradient(135deg, var(--primary-main), var(--primary-shadow)); z-index: 50; }
+        .f-back   { transform: rotateY(180deg) translateZ(calc(var(--box-size) / 2)); background: var(--primary-shadow); z-index: 10; }
+        .f-left   { transform: rotateY(-90deg) translateZ(calc(var(--box-size) / 2)); background: linear-gradient(to bottom, var(--primary-shadow), var(--primary-deep)); z-index: 20; }
+        .f-right  { transform: rotateY(90deg) translateZ(calc(var(--box-size) / 2)); background: linear-gradient(to bottom, var(--primary-shadow), var(--primary-deep)); z-index: 20; }
+        .f-bottom { transform: rotateX(-90deg) translateZ(calc(var(--box-size) / 2)); background: var(--primary-deep); z-index: 5; }
+
+        .lid-wrap {
+            position: absolute; width: var(--lid-w); height: var(--lid-w);
+            left: 50%; top: 50%; margin-left: calc(var(--lid-w) / -2); margin-top: calc(var(--lid-w) / -2);
+            transform-style: preserve-3d; 
+            transform: translateY(calc(var(--box-size) / -2 - 6px)) rotateX(-90deg);
+            transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1); z-index: 100;
+           
+        }
+
+        .scene.opened .lid-wrap { transform: translateY(-130vh) rotateX(-90deg); }
+
+        .lid-top {
+            position: absolute; width: 100%; height: 100%;
+            background: radial-gradient(circle at 40% 40%, var(--primary-bright) 0%, var(--primary-main) 50%, var(--primary-shadow) 100%);
+            transform-style: preserve-3d; 
+            border: 1px solid rgba(255,255,255,0.2); transition: background 0.6s;  
+           
+        }
+
+        .l-wall {
+            position: absolute; background: linear-gradient(to bottom, var(--primary-main), var(--primary-shadow));
+            transform-style: preserve-3d; transition: background 0.6s;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .lw-f { width: 100%; height: var(--lid-h); bottom: 0; transform-origin: bottom; transform: rotateX(-90deg); }
+        .lw-b { width: 100%; height: var(--lid-h); top: 0; transform-origin: top; transform: rotateX(90deg); }
+        .lw-l { width: var(--lid-h); height: 100%; left: 0; transform-origin: left; transform: rotateY(-90deg); }
+        .lw-r { width: var(--lid-h); height: 100%; right: 0; transform-origin: right; transform: rotateY(90deg); }
+
+        .winner-card {
+            display: none; background: white; padding: 1.5rem; border-radius: 30px; text-align: center;
+            width: 280px; box-shadow: 0 20px 80px rgba(0,0,0,0.8);
+            position: absolute; left: 50%; top: 50%; margin-left: -140px; margin-top: -180px;
+            transform-style: preserve-3d; z-index: 10; pointer-events: auto; opacity: 0;
+        }
+
+        .scene.opened + #winnerWrapper .winner-card {
+            display: block; animation: emergeAndCenter 3.5s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+        }
+
+        .winner-card.closing { animation: retreatIntoBox 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards !important; }
+
+        @keyframes emergeAndCenter {
+            0% { transform: translateZ(-100px) scale(0) translateY(120px) rotateY(180deg); opacity: 0; }
+            30% { transform: translateZ(-50px) scale(0.1) translateY(-450px) rotateY(90deg); opacity: 0.8; }
+            60% { transform: translateZ(300px) scale(0.5) translateY(-400px) rotateY(0deg); opacity: 1; }
+            100% { transform: translateZ(600px) scale(1) translateY(0px) rotateY(0deg); opacity: 1; }
+        }
+
+        @keyframes retreatIntoBox {
+            0% { transform: translateZ(600px) scale(1) translateY(0px) rotateY(0deg); opacity: 1; }
+            30% { transform: translateZ(300px) scale(0.6) translateY(-500px) rotateY(0deg); opacity: 1; }
+            60% { transform: translateZ(0px) scale(0.3) translateY(-450px) rotateY(90deg); opacity: 1; }
+            85% { transform: translateZ(-50px) scale(0.1) translateY(50px) rotateY(180deg); opacity: 0.8; }
+            100% { transform: translateZ(-100px) scale(0) translateY(120px) rotateY(180deg); opacity: 0; }
+        }
+
+        .fw-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 1000; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    </style>
+</head>
+<body class="select-none">
+
+    <div id="starsContainer"></div>
+    <canvas id="fireworkCanvas" class="fw-canvas"></canvas>
+
+    <div class="top-nav">
+        <div class="nav-btn" onclick="toggleFullScreen()" title="Full Screen">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+        </div>
+        <div class="nav-btn hamburger" onclick="toggleMenu()" title="Settings">
+            <div style="margin-bottom:4px"></div><div style="margin-bottom:4px"></div><div></div>
+        </div>
+    </div>
+
+    <div id="menuOverlay" class="menu-overlay flex flex-col p-10">
+        <div class="flex justify-between items-center mb-10">
+            <h2 class="text-3xl font-bold text-yellow-400 text-khmer">ការកំណត់</h2>
+            <button onclick="toggleMenu()" class="text-4xl text-white">&times;</button>
+        </div>
+        
+        <div class="space-y-10">
+            <div>
+                <p class="text-white/40 mb-4 font-bold uppercase text-xs tracking-widest text-khmer">ជ្រើសរើសផ្ទៃខាងក្រោយ</p>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="bgThumbnails"></div>
+            </div>
+            
+            <div>
+                <p class="text-white/40 mb-4 font-bold uppercase text-xs tracking-widest text-khmer">ពណ៌កម្មវិធី</p>
+                <div class="flex gap-4">
+                    <div class="swatch selected" data-theme="dark" style="background: #0f0c29; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;"></div>
+                    <div class="swatch" data-theme="indigo" style="background: #1e3799; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;"></div>
+                    <div class="swatch" data-theme="emerald" style="background: #064e3b; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;"></div>
+                    <div class="swatch" data-theme="maroon" style="background: #450a0a; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="homeScreen" class="relative z-10 flex flex-col items-center justify-start p-4 min-h-screen pt-16">
+        <div class="mb-4 text-center">
+            <h1 id="appTitle" 
+                onmousedown="startAdminHold(event)" onmouseup="clearAdminHold(event)" onmouseleave="clearAdminHold(event)" 
+                ontouchstart="startAdminHold(event)" ontouchend="clearAdminHold(event)" 
+                class="cursor-pointer text-4xl sm:text-6xl font-black text-yellow-400 drop-shadow-[0_4px_15px_rgba(0,0,0,0.6)] tracking-tight uppercase">បញ្ជីរាយនាមសិស្ស</h1>
+        </div>
+        <div id="mainGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 w-full max-w-7xl overflow-y-auto h-[70vh] p-10 bg-black/20 rounded-[50px] backdrop-blur-xl border border-white/10 shadow-2xl custom-scrollbar"></div>
+        <div class="mt-8">
+            <button onclick="goToMagic()" class="group relative bg-gradient-to-r from-yellow-400 via-orange-500 to-yellow-500 text-black font-black px-20 py-5 rounded-full text-2xl shadow-[0_15px_60px_rgba(234,179,8,0.5)] hover:scale-105 active:scale-95 transition-all text-khmer">
+                បើកប្រអប់វេទមន្ដ 
+            </button>
+        </div>
+    </div>
+
+    <div id="magicScreen" class="hidden fixed inset-0 flex flex-col items-center justify-center z-50 overflow-hidden">
+        <div id="magicBgOverlay" class="absolute inset-0 bg-black/60 -z-10" style="backdrop-filter: blur(var(--bg-blur));"></div>
+        <button onclick="goHome()" class="absolute top-20 left-10 bg-white/10 px-8 py-3 rounded-2xl text-white border border-white/10 z-[120] hover:bg-white/20 transition-all font-bold backdrop-blur-md text-khmer">← ត្រឡប់</button>
+        
+        <div class="left-blur-panel" id="leftPanel">
+            <span class="text-[10px] text-white font-bold mb-2">BLUR</span>
+            <input type="range" min="0" max="30" value="8" class="blur-slider" id="blurInput" oninput="updateBlur(this.value)">
+            <span id="blurValue" class="text-[10px] text-yellow-400 font-bold mt-2">8px</span>
+        </div>
+
+        <div class="right-box-panel" id="rightPanel">
+            <div class="box-swatch selected" data-box="blue" style="background: #2980b9;"></div>
+            <div class="box-swatch" data-box="gold" style="background: #f1c40f;"></div>
+            <div class="box-swatch" data-box="red" style="background: #d63031;"></div>
+            <div class="box-swatch" data-box="white" style="background: #ffffff;"></div>
+            <div class="box-swatch" data-box="pink" style="background: #fd79a8;"></div>
+            <div class="box-swatch" data-box="neon" style="background: #00cec9;"></div>
+            <div class="box-swatch color-wheel-btn" onclick="document.getElementById('customColor').click()">
+                <input type="color" id="customColor" class="sr-only" onchange="applyCustomBoxColor(this.value)">
+                <span class="text-[10px] text-white font-bold pointer-events-none">🎨</span>
+            </div>
+        </div>
+
+        <div id="wandThreeContainer"></div>
+
+        <div class="magic-area">
+            <div class="scene rotating" id="box3D" onclick="startPicking()">
+                <div class="box-body">
+                    <div class="face f-front"></div><div class="face f-back"></div><div class="face f-left"></div><div class="face f-right"></div><div class="face f-bottom"></div>
+                </div>
+                <div class="lid-wrap" id="lidWrap">
+                    <div class="lid-top">
+                        <div class="l-wall lw-f"></div><div class="l-wall lw-b"></div><div class="l-wall lw-l"></div><div class="l-wall lw-r"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="winnerWrapper" class="absolute inset-0 pointer-events-none" style="transform-style: preserve-3d;">
+                <div id="winnerCard" class="winner-card">
+                    <div class="w-24 h-24 mx-auto rounded-full border-4 border-yellow-400 overflow-hidden mb-3 shadow-2xl bg-slate-200">
+                        <img id="winnerImg" src="" class="w-full h-full object-cover">
+                    </div>
+                    <h3 class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.3em] mb-1 text-khmer">🎉អបអរសាទ🎉</h3>
+                    <h2 id="winnerName" class="text-2xl font-black text-slate-900 mb-6"></h2>
+                    <div class="flex flex-col gap-2">
+                        <button onclick="resetBox()" class="bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg active:scale-95 pointer-events-auto text-khmer">ម្ដងទៀត</button>
+                        <button onclick="removeAndNext()" class="bg-red-50 text-red-600 py-3 rounded-xl font-bold hover:bg-red-100 transition-all active:scale-95 pointer-events-auto text-khmer">ដកឈ្មោះចេញ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p id="hintText" class="mt-8 text-white/40 animate-pulse font-bold tracking-widest text-sm text-khmer">ចុចលើប្រអប់ដើម្បីបើក</p>
+    </div>
+
+    <div id="adminPanel" class="hidden fixed inset-0 flex items-center justify-center z-[2000] p-4 sm:p-6 backdrop-blur-2xl">
+        <div class="bg-[#1a1c23] p-6 sm:p-10 rounded-[40px] border border-white/10 w-full max-w-5xl h-[90vh] flex flex-col gap-6 relative shadow-2xl overflow-hidden">
+            <button onclick="closeAdmin()" class="absolute top-6 right-6 w-12 h-12 bg-white/5 text-white rounded-full flex items-center justify-center text-2xl hover:bg-red-500 transition-colors">×</button>
+            <div class="flex flex-col lg:flex-row gap-8 h-full mt-4">
+                <div class="w-full lg:w-2/5 flex flex-col gap-4">
+                    <h2 class="text-2xl font-bold text-yellow-400 text-khmer">បន្ថែមសិស្សថ្មី</h2>
+                    <div class="bg-white/5 p-6 rounded-[30px] border border-white/5 flex flex-col items-center gap-4 relative">
+                        <div class="relative group cursor-pointer" onclick="document.getElementById('fileInput').click()">
+                            <img id="previewAvatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=1" class="w-28 h-28 rounded-full border-4 border-yellow-400 object-cover bg-indigo-950 shadow-2xl transition-transform hover:scale-105">
+                        </div>
+                        <button onclick="openAvatarModal()" class="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-xl text-xs text-white/70 transition-all text-khmer">🎭 បណ្ណាល័យរូបតុក្កតា</button>
+                        <input type="text" id="newName" placeholder="ឈ្មោះសិស្ស..." class="w-full bg-black/20 border border-white/10 rounded-2xl px-6 py-4 outline-none text-white focus:border-yellow-400 transition-all text-center text-lg">
+                        <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
+                        <div class="w-full flex gap-2">
+                            <button onclick="addNew()" class="w-full bg-yellow-500 text-black py-4 rounded-2xl font-black hover:bg-yellow-400 transition-all shadow-xl active:scale-95 text-khmer">បន្ថែមទៅបញ្ជី</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-full lg:w-3/5 flex flex-col gap-4 overflow-hidden lg:border-l border-white/5 lg:pl-10">
+                    <div class="flex justify-between items-center px-2"><h2 class="text-lg font-bold text-white/50 text-khmer">សរុប <span id="studCount" class="text-white">0</span> នាក់</h2><button onclick="clearAll()" class="text-red-400 text-xs font-bold hover:text-red-300 transition-colors text-khmer">លុបទាំងអស់</button></div>
+                    <div id="adminList" class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="avatarModal" class="hidden fixed inset-0 z-[3000] bg-black/95 flex items-center justify-center p-6 backdrop-blur-xl">
+        <div class="bg-[#1a1c23] w-full max-w-4xl p-8 rounded-[40px] border border-white/10 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-yellow-400 text-khmer">ជ្រើសរើសរូបតុក្កតា</h3>
+                <button onclick="closeAvatarModal()" class="text-white/40 text-2xl">×</button>
+            </div>
+            <div id="avatarLibrary" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-4 overflow-y-auto max-h-[60vh] pr-4 custom-scrollbar"></div>
+            <button onclick="closeAvatarModal()" class="mt-8 w-full bg-indigo-600 py-4 rounded-2xl font-bold text-white shadow-xl hover:bg-indigo-500 transition-all text-khmer">យល់ព្រម</button>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 bg-yellow-500 text-black px-10 py-4 rounded-full font-bold opacity-0 transition-all z-[4000] shadow-2xl pointer-events-none"></div>
+
+    <script>
+        function getHighResURL(url) {
+            if (!url || url === 'none') return 'none';
+            if (url.includes('drive.google.com')) {
+                const idMatch = url.match(/\/d\/([^\/]+)/) || url.match(/id=([^\&]+)/);
+                if (idMatch && idMatch[1]) return `https://lh3.googleusercontent.com/u/0/d/${idMatch[1]}=w2560-iv1`;
+            }
+            return url;
+        }
+
+        let students = JSON.parse(localStorage.getItem('magic_students_v1')) || [
+            { id: 101, name: "អាំ នាង", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ezra" },
+            { id: 102, name: "ឡុក ហ៊ាប", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Leo" },
+            { id: 103, name: "ហ៊ុំ សាមាន", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Molly" },
+            { id: 104, name: "ហ៊ុំ ស្រីនិច", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Milo" },
+	        { id: 105, name: "ហ៊ុំ សាណេត", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bella" },
+	        { id: 106, name: "ហ៊ុំ សារុំ", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Theo" },
+	        { id: 107, name: "ហ៊ុំ សារ៉េត", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Gus" },	
+	        { id: 108, name: "ហ៊ុំ សុកមាស", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Toby" },
+            { id: 109, name: "ហ៊ុំ សុកម៉េង", photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=Arlo" }
+        ];
+        let forcedQueue = JSON.parse(localStorage.getItem('magic_forced_v1')) || [];
+        let activePool = [...students]; 
+        let currentWinner = null;
+        let selectedAvatar = "https://api.dicebear.com/7.x/avataaars/svg?seed=1";
+        let isExploding = false;
+        let adminTimer;
+        let isPickingActive = false; 
+
+        let tScene, tCamera, tRenderer, tWand, tWandTip, tWandTipLight;
+        let wandVisible = false;
+
+        const themes = { dark: '#0f0c29', indigo: '#1e3799', emerald: '#064e3b', maroon: '#450a0a' };
+        const bgList = [
+            { id: 'none', url: 'none', label: 'គ្មាន' },
+            { id: 'night', url: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1920&q=80', label: 'ទេសភាពយប់' },
+            { id: 'user_bg_1', url: 'https://drive.google.com/file/d/1tJUAq9dONQq-rbiu0JG8RO6m7JmtoAzz/view?usp=sharing', label: 'Theme 1' },
+            { id: 'user_bg_2', url: 'https://drive.google.com/file/d/1fOQAa5j917s6ssWlhNAprDADVfyWvl8q/view?usp=sharing', label: 'Theme 2' },
+            { id: 'user_bg_3', url: 'https://drive.google.com/file/d/1S2zLwEEk-gJxeRKnYM15GyMnjTakjsfx/view?usp=sharing', label: 'Theme 3' },
+            { id: 'wp1', url: 'https://drive.google.com/file/d/1Buk0TF54UqYj8RyezjyDQrAZel_MXGmd/view?usp=sharing', label: 'WP 1' },
+            { id: 'wp2', url: 'https://drive.google.com/file/d/10dtn2KZ3VV4tuoHv6eSQ0eetlTmYoBd7/view?usp=sharing', label: 'WP 2' },
+            { id: 'wp3', url: 'https://drive.google.com/file/d/1l2CCl7gl1w-4_kgXWKolfFcFypTjayVT/view?usp=sharing', label: 'WP 3' },
+            { id: 'wp4', url: 'https://drive.google.com/file/d/1-aPgoiTuep0kpYJAQ7L9XGxlUxcMq9pP/view?usp=sharing', label: 'WP 4' }
+        ];
+
+        const boxThemes = {
+            blue: { main: '#2980b9', bright: '#3498db', shadow: '#1e3799', deep: '#0c2461' },
+            gold: { main: '#f1c40f', bright: '#feca57', shadow: '#d35400', deep: '#a44a00' },
+            red: { main: '#d63031', bright: '#ff4d4d', shadow: '#b32626', deep: '#8e1a1a' },
+            white: { main: '#ffffff', bright: '#f1f2f6', shadow: '#dfe6e9', deep: '#b2bec3' },
+            pink: { main: '#fd79a8', bright: '#ff9ff3', shadow: '#e84393', deep: '#c0392b' },
+            neon: { main: '#00cec9', bright: '#81ecec', shadow: '#00b894', deep: '#006266' }
+        };
+
+        const canvas = document.getElementById('fireworkCanvas');
+        const ctx = canvas.getContext('2d');
+        let fireworkParticles = [];
+
+        function resizeCanvas() { 
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight; 
+            if(tRenderer) {
+                tCamera.aspect = window.innerWidth / window.innerHeight;
+                tCamera.updateProjectionMatrix();
+                tRenderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+
+        function updateBlur(val) {
+            document.documentElement.style.setProperty('--bg-blur', val + 'px');
+            document.getElementById('blurValue').innerText = val + 'px';
+            localStorage.setItem('m_bg_blur', val);
+        }
+
+        function initThreeWand() {
+            tScene = new THREE.Scene();
+            tCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            tCamera.position.set(0, 0, 10);
+            tRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            tRenderer.setSize(window.innerWidth, window.innerHeight);
+            tRenderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('wandThreeContainer').appendChild(tRenderer.domElement);
+            tScene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            const spotLight = new THREE.SpotLight(0xffffff, 2.5);
+            spotLight.position.set(10, 15, 10);
+            tScene.add(spotLight);
+            tWandTipLight = new THREE.PointLight(0x00d2ff, 0, 30);
+            tScene.add(tWandTipLight);
+            tWand = new THREE.Group();
+            const handleGeo = new THREE.CylinderGeometry(0.25, 0.35, 2.5, 24); 
+            const handleMat = new THREE.MeshStandardMaterial({ color: 0x2c1a0f, roughness: 0.8 });
+            const handle = new THREE.Mesh(handleGeo, handleMat);
+            handle.position.y = -1.25; 
+            tWand.add(handle);
+            const shaftGeo = new THREE.CylinderGeometry(0.1, 0.25, 6.5, 24); 
+            const shaftMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3, metalness: 0.6 });
+            const shaft = new THREE.Mesh(shaftGeo, shaftMat);
+            shaft.position.y = 3.25; 
+            tWand.add(shaft);
+            const tipGeo = new THREE.SphereGeometry(0.35, 32, 32); 
+            const tipMat = new THREE.MeshBasicMaterial({ color: 0x00f2ff });
+            tWandTip = new THREE.Mesh(tipGeo, tipMat);
+            tWandTip.position.y = 6.5; 
+            tWand.add(tWandTip);
+            tWandTipLight.position.copy(tWandTip.position);
+            tWand.add(tWandTipLight);
+            tWand.position.y = -5; 
+            tScene.add(tWand);
+            animateThree();
+        }
+
+        function animateThree() {
+            requestAnimationFrame(animateThree);
+            if(wandVisible && tWand) tRenderer.render(tScene, tCamera);
+        }
+
+        class FWParticle {
+            constructor(x, y, color, velocity) {
+                this.x = x; this.y = y; this.color = color; this.velocity = velocity;
+                this.alpha = 1; this.friction = 0.96; this.gravity = 0.15;
+            }
+            draw() {
+                ctx.save(); ctx.globalAlpha = this.alpha; ctx.beginPath();
+                ctx.arc(this.x, this.y, 2.5, 0, Math.PI * 2, false);
+                ctx.fillStyle = this.color; ctx.shadowBlur = 15; ctx.shadowColor = this.color;
+                ctx.fill(); ctx.restore();
+            }
+            update() {
+                this.velocity.x *= this.friction; this.velocity.y *= this.friction;
+                this.velocity.y += this.gravity; this.x += this.velocity.x; this.y += this.velocity.y;
+                this.alpha -= 0.01;
+            }
+        }
+
+        function createExplosion(x, y) {
+            const count = 75;
+            const colors = ['#ff4d4d', '#f1c40f', '#2ecc71', '#3498db', '#e84393', '#00cec9', '#ffffff'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 / count) * i;
+                const speed = 2 + Math.random() * 9;
+                fireworkParticles.push(new FWParticle(x, y, color, { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed }));
+            }
+        }
+
+        function animateFireworks() {
+            if (!isExploding && fireworkParticles.length === 0) { ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
+            requestAnimationFrame(animateFireworks);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (isExploding && Math.random() < 0.12) createExplosion(Math.random() * canvas.width, Math.random() * canvas.height * 0.6 + 50);
+            fireworkParticles.forEach((p, i) => { if (p.alpha > 0) { p.update(); p.draw(); } else { fireworkParticles.splice(i, 1); } });
+        }
+
+        function init() {
+            window.addEventListener('resize', resizeCanvas); resizeCanvas(); 
+            renderHome(); initStars(); initAvatarLibrary(); initWallpaperThumbs();
+            document.querySelectorAll('.swatch').forEach(s => s.onclick = () => applyTheme(s.dataset.theme));
+            document.querySelectorAll('.box-swatch[data-box]').forEach(bs => bs.onclick = () => applyBox(bs.dataset.box));
+            loadSettings(); animateFireworks(); initThreeWand();
+            const savedBlur = localStorage.getItem('m_bg_blur') || 8;
+            document.getElementById('blurInput').value = savedBlur;
+            updateBlur(savedBlur);
+        }
+
+        function applyBox(n) {
+            const t = boxThemes[n] || boxThemes.blue;
+            updateCSSBoxVariables(t);
+            document.querySelectorAll('.box-swatch').forEach(s => s.classList.toggle('selected', s.dataset.box === n));
+            localStorage.setItem('m_th_box', n);
+        }
+
+        function updateCSSBoxVariables(t) {
+            const r = document.documentElement;
+            r.style.setProperty('--primary-main', t.main); r.style.setProperty('--primary-bright', t.bright);
+            r.style.setProperty('--primary-shadow', t.shadow); r.style.setProperty('--primary-deep', t.deep);
+            r.style.setProperty('--box-glow', t.bright); 
+        }
+
+        function applyCustomBoxColor(hex) {
+            const t = { main: hex, bright: adjustColor(hex, 40), shadow: adjustColor(hex, -40), deep: adjustColor(hex, -80) };
+            updateCSSBoxVariables(t);
+            document.querySelectorAll('.box-swatch').forEach(s => s.classList.remove('selected'));
+            localStorage.setItem('m_th_box_custom', hex);
+        }
+
+        function adjustColor(hex, amt) {
+            if (hex[0] == "#") hex = hex.slice(1);
+            let num = parseInt(hex, 16);
+            let r = Math.max(0, Math.min(255, (num >> 16) + amt));
+            let b = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amt));
+            let g = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
+            return "#" + (g | (b << 8) | (r << 16)).toString(16).padStart(6, '0');
+        }
+
+        function getWandTipScreenPos() {
+            const vector = new THREE.Vector3();
+            tWandTip.getWorldPosition(vector);
+            vector.project(tCamera);
+            return { x: (vector.x * 0.5 + 0.5) * window.innerWidth, y: (vector.y * -0.5 + 0.5) * window.innerHeight };
+        }
+
+        function startPicking() {
+            if(isPickingActive || document.getElementById('box3D').classList.contains('opened') || !activePool.length) {
+                if(!activePool.length) showToast("អស់ឈ្មោះសិស្សក្នុងប្រអប់ហើយ!");
+                return;
+            }
+            
+            isPickingActive = true;
+            const b = document.getElementById('box3D');
+            const wandContainer = document.getElementById('wandThreeContainer');
+            const h = document.getElementById('hintText');
+            const p = document.getElementById('rightPanel');
+            const lp = document.getElementById('leftPanel');
+            const card = document.getElementById('winnerCard');
+            
+            card.classList.remove('closing'); 
+            h.style.display = 'none'; p.style.opacity = '0'; p.style.pointerEvents = 'none';
+            lp.style.opacity = '0'; lp.style.pointerEvents = 'none';
+            
+            wandVisible = true;
+            wandContainer.style.display = 'block';
+            const tl = gsap.timeline();
+            tl.set(tWand.position, { x: 5, y: -13, z: 2 });
+            tl.set(tWand.rotation, { x: -0.3, y: 0, z: 0 });
+            
+            tl.to(tWand.position, { y: -8, duration: 1.2, ease: "back.out(1.2)" });
+            
+            tl.to(tWand.rotation, { z: 0.15, duration: 0.12, yoyo: true, repeat: 1 }); 
+            tl.to(tWand.rotation, { z: -0.15, duration: 0.12, yoyo: true, repeat: 1 }); 
+            tl.to(tWand.rotation, { z: 0.2, duration: 0.12, yoyo: true, repeat: 1 }); 
+            
+            tl.to(tWandTipLight, { intensity: 50, duration: 0.5 }, "-=0.3");
+            tl.to(tWand.rotation, { z: 0.6, x: 0.2, duration: 0.7, ease: "power3.inOut" });
+            tl.to(tWand.position, { x: 4, y: -7.5, duration: 0.7, ease: "power3.inOut" }, "<");
+            
+            tl.add(() => shootMassiveParticles(), "-=0.2");
+            tl.add(() => { b.classList.remove('rotating'); b.classList.add('magic-spin'); }, "+=0.3");
+            tl.to(tWand.position, { y: -15, duration: 1.5, ease: "power2.in" }, "+=2.0");
+            
+            tl.add(() => {
+                let winCandidate = null;
+                
+                // Logic ថ្មីសម្រាប់ការកំណត់ផ្កាយ (Forced Queue)
+                if(forcedQueue.length > 0) {
+                    const forcedId = forcedQueue[0];
+                    // រកមើលឈ្មោះក្នុង activePool ដែលមាន ID ដូចការកំណត់
+                    winCandidate = activePool.find(s => s.id == forcedId);
+                    
+                    if(winCandidate) {
+                        // បើរកឃើញ ដកចេញពី Queue
+                        forcedQueue.shift();
+                    } else {
+                        // បើឈ្មោះដែលកំណត់មិនមានក្នុង activePool (ប្រហែលត្រូវគេដកចេញ)
+                        // លុបវាចេញពី Queue ហើយរើស Random ជំនួសវិញ
+                        forcedQueue.shift();
+                        winCandidate = activePool[Math.floor(Math.random() * activePool.length)];
+                    }
+                } else {
+                    // បើគ្មានផ្កាយទេ រើសដោយចៃដន្យ
+                    winCandidate = activePool[Math.floor(Math.random() * activePool.length)];
+                }
+
+                currentWinner = winCandidate;
+                document.getElementById('winnerName').innerText = winCandidate.name;
+                document.getElementById('winnerImg').src = winCandidate.photo;
+                
+                b.classList.remove('magic-spin'); 
+                b.classList.add('opened');
+                b.classList.remove('glow-active'); 
+                setTimeout(() => { isExploding = true; animateFireworks(); }, 1200); 
+                saveStateOnly(); // រក្សាទុកស្ថានភាព Forced Queue ថ្មី
+            });
+            tl.add(() => { wandVisible = false; wandContainer.style.display = 'none'; });
+        }
+
+        function shootMassiveParticles() {
+            const container = document.getElementById('magicScreen');
+            const b = document.getElementById('box3D');
+            const lidRect = document.getElementById('lidWrap').getBoundingClientRect();
+            const targetX = lidRect.left + (lidRect.width / 2);
+            const targetY = lidRect.top + (lidRect.height / 2);
+            const tipPos = getWandTipScreenPos();
+            let hitCount = 0;
+            for(let i=0; i < 150; i++) {
+                setTimeout(() => {
+                    const orb = document.createElement('div');
+                    orb.className = 'magic-orb';
+                    const size = 6 + Math.random() * 14;
+                    const hue = 180 + Math.random() * 40; 
+                    const color = `hsl(${hue}, 100%, 75%)`;
+                    orb.style.width = orb.style.height = size + 'px';
+                    orb.style.background = `radial-gradient(circle, #fff 0%, ${color} 70%, transparent 100%)`;
+                    orb.style.boxShadow = `0 0 ${size*2}px ${color}`;
+                    container.appendChild(orb);
+                    orb.style.left = tipPos.x + 'px'; orb.style.top = tipPos.y + 'px';
+                    const angle = Math.random() * Math.PI * 2;
+                    const radius = 60 + Math.random() * 180;
+                    const tl = gsap.timeline();
+                    tl.to(orb, { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius, duration: 0.4, ease: "power2.out" });
+                    tl.to(orb, { x: targetX - tipPos.x, y: targetY - tipPos.y, scale: 0.2, opacity: 1, duration: 0.7, ease: "power2.in", onComplete: () => {
+                            hitCount++; if(hitCount === 1) b.classList.add('glow-active');
+                            createImpactSparks(targetX, targetY, color); orb.remove();
+                        }
+                    });
+                }, i * 5);
+            }
+        }
+
+        function createImpactSparks(x, y, color) {
+            const spark = document.createElement('div');
+            spark.className = 'magic-orb'; spark.style.width = spark.style.height = '4px';
+            spark.style.background = color; spark.style.left = x + 'px'; spark.style.top = y + 'px';
+            document.getElementById('magicScreen').appendChild(spark);
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 30 + Math.random() * 70;
+            gsap.to(spark, { x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, opacity: 0, duration: 0.6, onComplete: () => spark.remove() });
+        }
+
+        function resetBox() {
+            isPickingActive = false;
+            isExploding = false; 
+            const b = document.getElementById('box3D');
+            b.classList.remove('glow-active');
+            document.getElementById('winnerCard').classList.add('closing'); 
+            setTimeout(() => {
+                b.classList.remove('opened');
+                setTimeout(() => {
+                    if(!b.classList.contains('opened')) { 
+                        b.classList.add('rotating'); 
+                        document.getElementById('hintText').style.display = 'block'; 
+                        document.getElementById('rightPanel').style.opacity = '1'; 
+                        document.getElementById('rightPanel').style.pointerEvents = 'auto'; 
+                        document.getElementById('leftPanel').style.opacity = '1'; 
+                        document.getElementById('leftPanel').style.pointerEvents = 'auto'; 
+                    }
+                }, 1200);
+            }, 1200);
+        }
+
+        function removeAndNext() {
+            isPickingActive = false;
+            isExploding = false; 
+            document.getElementById('winnerCard').classList.add('closing');
+            setTimeout(() => {
+                if(currentWinner) {
+                    activePool = activePool.filter(s => s.id !== currentWinner.id);
+                }
+                
+                if(!activePool.length) { 
+                    showToast("អស់ឈ្មោះសិស្សក្នុងប្រអប់ហើយ!"); 
+                    goHome(); 
+                } else { 
+                    resetBox(); 
+                }
+            }, 1200);
+        }
+
+        function initStars() {
+            const c = document.getElementById('starsContainer'); c.innerHTML = '';
+            for(let i=0; i<80; i++) {
+                const s = document.createElement('div'); s.className = 'star';
+                s.style.left = Math.random()*100+'vw'; s.style.top = Math.random()*100+'vh';
+                s.style.width = s.style.height = (Math.random()*2+1)+'px';
+                s.style.setProperty('--duration', (Math.random()*3+2)+'s'); c.appendChild(s);
+            }
+        }
+
+        function renderHome() {
+            const g = document.getElementById('mainGrid'); g.innerHTML = '';
+            if(!students.length) { g.innerHTML = '<div class="col-span-full py-20 text-white/10 italic text-center text-xl text-khmer">មិនទាន់មានសិស្ស...</div>'; return; }
+            students.forEach(s => {
+                const isInBox = activePool.some(ap => ap.id === s.id);
+                g.innerHTML += `
+                    <div class="group flex flex-col items-center p-6 rounded-[50px] bg-white/5 border border-white/5 transition-all duration-500 hover:bg-white/10 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)] ${isInBox ? 'scale-100' : 'opacity-20 grayscale scale-90'}">
+                        <img src="${s.photo}" class="w-32 h-32 rounded-full border-4 border-white/10 mb-5 object-cover bg-indigo-950 shadow-2xl group-hover:border-yellow-400 group-hover:scale-105 transition-all">
+                        <span class="text-xl font-bold text-white/90 truncate w-full text-center tracking-wide">${s.name}</span>
+                    </div>`;
+            });
+        }
+
+        function initAvatarLibrary() {
+            const lib = document.getElementById('avatarLibrary'); lib.innerHTML = '';
+            for(let i=1; i<=100; i++) {
+                const u = `https://api.dicebear.com/7.x/avataaars/svg?seed=magic-${i}`;
+                const img = document.createElement('img');
+                img.src = u; img.className = 'cursor-pointer rounded-xl bg-white/5 p-1 hover:bg-white/20 transition-all border-2 border-transparent w-full aspect-square object-contain';
+                img.onclick = () => { selectedAvatar = u; document.getElementById('previewAvatar').src = u; closeAvatarModal(); };
+                lib.appendChild(img);
+            }
+        }
+
+        function initWallpaperThumbs() {
+            const container = document.getElementById('bgThumbnails'); container.innerHTML = '';
+            bgList.forEach(bg => {
+                const div = document.createElement('div'); 
+                div.className = 'bg-mini-thumb w-full aspect-video rounded-xl bg-cover bg-center cursor-pointer border-2 border-transparent hover:scale-105 transition-all hover:border-yellow-400';
+                if (bg.url !== 'none') div.style.backgroundImage = `url(${getHighResURL(bg.url)})`;
+                else div.classList.add('bg-white/5');
+                div.onclick = () => applyBG(bg.id);
+                container.appendChild(div);
+            });
+        }
+
+        function applyBG(bgId) {
+            const bgObj = bgList.find(b => b.id === bgId) || bgList[0];
+            const hqUrl = getHighResURL(bgObj.url);
+            document.body.style.backgroundImage = (hqUrl === 'none') ? 'none' : `url(${hqUrl})`;
+            localStorage.setItem('m_th_img_id', bgId);
+        }
+
+        function applyTheme(n) {
+            document.body.style.backgroundColor = themes[n];
+            document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('selected', s.dataset.theme === n));
+            localStorage.setItem('m_th_bg', n);
+        }
+
+        function loadSettings() {
+            applyTheme(localStorage.getItem('m_th_bg') || 'dark');
+            applyBG(localStorage.getItem('m_th_img_id') || 'night');
+            const customBox = localStorage.getItem('m_th_box_custom');
+            if(customBox) applyCustomBoxColor(customBox); else applyBox(localStorage.getItem('m_th_box') || 'blue');
+        }
+
+        function startAdminHold(e) { 
+            if (e.cancelable) e.preventDefault();
+            document.getElementById('appTitle').classList.add('holding');
+            adminTimer = setTimeout(() => { 
+                document.getElementById('appTitle').classList.remove('holding');
+                document.getElementById('adminPanel').classList.remove('hidden'); renderAdmin(); 
+            }, 2000); 
+        }
+        function clearAdminHold(e) { clearTimeout(adminTimer); document.getElementById('appTitle').classList.remove('holding'); }
+        function closeAdmin() { document.getElementById('adminPanel').classList.add('hidden'); renderHome(); }
+        function toggleMenu() { document.getElementById('menuOverlay').classList.toggle('active'); }
+        
+        function goHome() { 
+            isPickingActive = false;
+            document.getElementById('homeScreen').classList.remove('hidden'); 
+            document.getElementById('magicScreen').classList.add('hidden'); 
+            renderHome(); 
+        }
+        
+        function goToMagic() { 
+            if(!students.length) return;
+            if(!activePool.length) activePool = [...students]; 
+            
+            isPickingActive = false;
+            document.getElementById('homeScreen').classList.add('hidden'); 
+            document.getElementById('magicScreen').classList.remove('hidden'); 
+            const b = document.getElementById('box3D'); 
+            b.classList.remove('opened', 'magic-spin', 'glow-active'); 
+            b.classList.add('rotating');
+            document.getElementById('hintText').style.display = 'block'; 
+            document.getElementById('rightPanel').style.opacity = '1'; 
+            document.getElementById('leftPanel').style.opacity = '1';
+        }
+
+        function renderAdmin() {
+            const l = document.getElementById('adminList'); l.innerHTML = '';
+            document.getElementById('studCount').innerText = students.length;
+            students.forEach((s, i) => {
+                // បញ្ជាក់ ID ជាលេខដើម្បីផ្ទៀងផ្ទាត់
+                const isF = forcedQueue.includes(Number(s.id));
+                l.innerHTML += `
+                    <div class="bg-white/5 p-4 rounded-3xl flex items-center justify-between border border-white/5">
+                        <div class="flex items-center gap-4">
+                            <img src="${s.photo}" class="w-10 h-10 rounded-full bg-indigo-950 border border-white/10">
+                            <span class="font-bold text-base text-white/90">${s.name}</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="toggleF(${s.id})" class="w-10 h-10 flex items-center justify-center rounded-xl transition-all ${isF ? 'bg-yellow-500 text-black' : 'bg-white/5 text-white/20'}">★</button>
+                            <button onclick="delStud(${i})" class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all">×</button>
+                        </div>
+                    </div>`;
+            });
+        }
+        
+        function addNew() {
+            const inp = document.getElementById('newName'); if(!inp.value.trim()) return;
+            const newS = { id: Date.now(), name: inp.value.trim(), photo: selectedAvatar };
+            students.push(newS); 
+            activePool.push(newS);
+            inp.value = ''; save(); renderAdmin();
+        }
+        
+        function toggleF(id) { 
+            const numericId = Number(id);
+            const idx = forcedQueue.indexOf(numericId); 
+            if(idx > -1) forcedQueue.splice(idx, 1); 
+            else forcedQueue.push(numericId); 
+            saveStateOnly(); 
+            renderAdmin(); 
+        }
+        
+        function delStud(i) { 
+            const sId = students[i].id; 
+            students.splice(i, 1); 
+            activePool = activePool.filter(s => s.id !== sId); 
+            forcedQueue = forcedQueue.filter(fid => fid !== Number(sId));
+            save(); 
+            renderAdmin(); 
+        }
+        
+        function save() { 
+            localStorage.setItem('magic_students_v1', JSON.stringify(students)); 
+            localStorage.setItem('magic_forced_v1', JSON.stringify(forcedQueue)); 
+        }
+        
+        function saveStateOnly() { 
+            localStorage.setItem('magic_forced_v1', JSON.stringify(forcedQueue)); 
+        }
+        
+        function clearAll() { 
+            if(confirm("តើអ្នកចង់លុបឈ្មោះទាំងអស់មែនទេ?")) { 
+                students = []; forcedQueue = []; activePool = []; 
+                save(); renderAdmin(); 
+            } 
+        }
+        
+        function showToast(m) { 
+            const t = document.getElementById('toast'); 
+            t.innerText = m; t.style.opacity = '1'; t.style.top = '100px'; 
+            setTimeout(() => { t.style.opacity = '0'; t.style.top = '24px'; }, 2000); 
+        }
+        
+        function toggleFullScreen() { 
+            if(!document.fullscreenElement) document.documentElement.requestFullscreen(); 
+            else document.exitFullscreen(); 
+        }
+        
+        function openAvatarModal() { document.getElementById('avatarModal').classList.remove('hidden'); }
+        function closeAvatarModal() { document.getElementById('avatarModal').classList.add('hidden'); }
+        
+        function handleFileUpload(event) {
+            const f = event.target.files[0];
+            if (f) { const r = new FileReader(); r.onload = (ev) => { selectedAvatar = ev.target.result; document.getElementById('previewAvatar').src = selectedAvatar; }; r.readAsDataURL(f); }
+        }
+        
+        window.onload = init;
+    </script>
+</body>
+</html>

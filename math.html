@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grade 4 Math Generator (All Lessons)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Battambang:wght@400;700&family=Moul&display=swap" rel="stylesheet">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body { font-family: 'Battambang', sans-serif; background: #eef2f3; padding: 20px; }
+        
+        /* Control Panel (Sticks to bottom for easy selection) */
+        .controls {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: #2c3e50; color: white; padding: 15px;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.2);
+            text-align: center; z-index: 100;
+            display: flex; gap: 10px; justify-content: center; align-items: center;
+        }
+        select, button, input {
+            padding: 10px; font-family: 'Battambang', sans-serif; font-size: 16px;
+            border-radius: 5px; border: none; outline: none;
+        }
+        button { background: #e67e22; color: white; font-weight: bold; cursor: pointer; }
+        button:hover { background: #d35400; }
+        button.print-btn { background: #27ae60; }
+
+        /* The Paper Sheet */
+        .page {
+            background: white; width: 210mm; min-height: 297mm;
+            margin: 0 auto 80px auto; padding: 20mm; 
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center; border-bottom: 2px solid #333; 
+            padding-bottom: 10px; margin-bottom: 20px;
+        }
+        h1 { font-family: 'Moul', serif; font-size: 22px; margin: 0; color: #2c3e50; }
+        .sub-header { display: flex; justify-content: space-between; margin-top: 15px; font-weight: bold; }
+        
+        /* Grid for questions */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+        .question-box { margin-bottom: 25px; font-size: 18px; break-inside: avoid; }
+
+        /* Print Settings */
+        @media print {
+            body { background: white; padding: 0; }
+            .controls { display: none; }
+            .page { box-shadow: none; margin: 0; width: 100%; padding: 10mm; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="page">
+        <div class="header">
+            <h1>លំហាត់គណិតវិទ្យា ថ្នាក់ទី៤</h1>
+            <div class="sub-header">
+                <span>ឈ្មោះ: _______________________</span>
+                <span>ពិន្ទុ: _______</span>
+            </div>
+        </div>
+        <div id="worksheetContent" class="grid-2">
+            </div>
+    </div>
+
+    <div class="controls">
+        <label>មេរៀន (Lesson):</label>
+        <select id="lessonSelect" onchange="generate()">
+            <option value="L1">១. ចំនួន (Numbers)</option>
+            <option value="L2">២. ប្រភាគ (Fractions)</option>
+            <option value="L3">៣. វិធីបូក (Addition)</option>
+            <option value="L4">៤. ធរណីមាត្រ (Geometry)</option>
+            <option value="L5">៥. ទម្ងន់ (Weight)</option>
+            <option value="L6">៦. វិធីដក (Subtraction)</option>
+            <option value="L7">៧. រូបិយវត្ថុ (Money)</option>
+            <option value="L8">៨. វិធីគុណ (Multiplication)</option>
+            <option value="L9">៩. វិធីចែក (Division)</option>
+            <option value="L10">១០. ពេលវេលា (Time)</option>
+            <option value="L11">១១. ប្រវែង (Length)</option>
+            <option value="L12">១២. ចំនួនទសភាគ (Decimals)</option>
+            <option value="L13">១៣. បូកទសភាគ (Add Decimals)</option>
+            <option value="L14">១៤. ដកទសភាគ (Sub Decimals)</option>
+            <option value="L15">១៥. មុំ (Angles)</option>
+            <option value="L16">១៦. បន្ទាត់កែង/ស្រប (Lines)</option>
+            <option value="L17">១៧. ស្ថិតិ (Statistics)</option>
+        </select>
+        <input type="number" id="qCount" value="10" style="width:50px; text-align:center;">
+        <top onclick="generate()">បង្កើតថ្មី (Generate)</button>
+        <top class="print-btn" onclick="window.print()">🖨️ Print</button>
+    </div>
+
+    <script>
+        function r(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+        function generate() {
+            const lesson = document.getElementById('lessonSelect').value;
+            const count = document.getElementById('qCount').value;
+            const container = document.getElementById('worksheetContent');
+            container.innerHTML = "";
+
+            for (let i = 1; i <= count; i++) {
+                let html = "";
+                let qText = "";
+
+                // --- LESSON 1: NUMBERS (Place Value) ---
+                if (lesson === "L1") {
+                    let num = r(10000, 99999);
+                    let places = ["រាយ (Ones)", "ដប់ (Tens)", "រយ (Hundreds)", "ពាន់ (Thousands)", "ម៉ឺន (Ten Thousands)"];
+                    let targetIndex = r(0, 4);
+                    let targetDigit = num.toString().split('').reverse()[targetIndex];
+                    qText = `ចំពោះចំនួន <strong>${num}</strong> តើលេខ <strong>${targetDigit}</strong> នៅខ្ទង់អ្វី?`;
+                }
+                
+                // --- LESSON 2: FRACTIONS ---
+                else if (lesson === "L2") {
+                    let den = r(3, 12);
+                    let num1 = r(1, den - 1);
+                    let num2 = r(1, den - num1);
+                    qText = `ចូរបូកប្រភាគ: $$\\frac{${num1}}{${den}} + \\frac{${num2}}{${den}} = \\dots$$`;
+                }
+
+                // --- LESSON 3: ADDITION ---
+                else if (lesson === "L3") {
+                    let a = r(10000, 50000);
+                    let b = r(1000, 40000);
+                    qText = `ចូរគណនា: $${a} + ${b} = \\dots$`;
+                }
+
+                // --- LESSON 4: GEOMETRY (Perimeter/Area logic) ---
+                else if (lesson === "L4") {
+                    let side = r(2, 15);
+                    let isArea = r(0, 1) === 0;
+                    if (isArea) qText = `រកផ្ទៃក្រឡាការេ (Area) ដែលមានជ្រុង $${side}cm$ ។`;
+                    else qText = `រកបរិមាត្រការេ (Perimeter) ដែលមានជ្រុង $${side}cm$ ។`;
+                }
+
+                // --- LESSON 5: WEIGHT (Conversion) ---
+                else if (lesson === "L5") {
+                    let kg = r(2, 20);
+                    let g = r(100, 900);
+                    qText = `ប្តូរខ្នាត: $${kg}kg \\; ${g}g = \\dots\\dots g$`;
+                }
+
+                // --- LESSON 6: SUBTRACTION ---
+                else if (lesson === "L6") {
+                    let a = r(50000, 90000);
+                    let b = r(10000, a - 100);
+                    qText = `ចូរគណនា: $${a} - ${b} = \\dots$`;
+                }
+
+                // --- LESSON 7: MONEY ---
+                else if (lesson === "L7") {
+                    let itemPrice = r(1, 9) * 1000; // e.g., 3000
+                    let moneyGiven = itemPrice + r(1, 5) * 500;
+                    qText = `ទំនិញថ្លៃ ${itemPrice}៛ ។ អ្នកអោយលុយ ${moneyGiven}៛ ។ តើត្រូវអាប់ប៉ុន្មាន?`;
+                }
+
+                // --- LESSON 8: MULTIPLICATION ---
+                else if (lesson === "L8") {
+                    let a = r(100, 999);
+                    let b = r(2, 9);
+                    qText = `ចូរគណនា: $${a} \\times ${b} = \\dots$`;
+                }
+
+                // --- LESSON 9: DIVISION ---
+                else if (lesson === "L9") {
+                    let b = r(2, 9);
+                    let ans = r(100, 500);
+                    let a = ans * b; // Ensure clean division
+                    qText = `ចូរគណនា: $${a} \\div ${b} = \\dots$`;
+                }
+
+                // --- LESSON 10: TIME ---
+                else if (lesson === "L10") {
+                    let hr = r(1, 10);
+                    qText = `ប្តូរម៉ោងជានាទី: $${hr} \\text{ ម៉ោង} = \\dots\\dots \\text{ នាទី}$`;
+                }
+
+                // --- LESSON 11: LENGTH ---
+                else if (lesson === "L11") {
+                    let m = r(1, 10);
+                    let cm = r(10, 90);
+                    qText = `ប្តូរខ្នាត: $${m}m \\; ${cm}cm = \\dots\\dots cm$`;
+                }
+
+                // --- LESSON 12: DECIMALS (Conversion) ---
+                else if (lesson === "L12") {
+                    let num = r(1, 9);
+                    qText = `សរសេរជាទសភាគ: $$\\frac{${num}}{10} = \\dots$$`;
+                }
+
+                // --- LESSON 13: DECIMAL ADDITION ---
+                else if (lesson === "L13") {
+                    let a = (r(10, 99) / 10).toFixed(1);
+                    let b = (r(10, 99) / 10).toFixed(1);
+                    qText = `ចូរគណនា: $${a} + ${b} = \\dots$`;
+                }
+
+                // --- LESSON 14: DECIMAL SUBTRACTION ---
+                else if (lesson === "L14") {
+                    let a = (r(50, 99) / 10).toFixed(1);
+                    let b = (r(10, 49) / 10).toFixed(1);
+                    qText = `ចូរគណនា: $${a} - ${b} = \\dots$`;
+                }
+
+                // --- LESSON 15: ANGLES ---
+                else if (lesson === "L15") {
+                    let angle = r(0, 2) === 0 ? 90 : (r(0, 1) === 0 ? 45 : 120);
+                    let type = angle === 90 ? "កែង (Right)" : (angle < 90 ? "ស្រួច (Acute)" : "ទាល (Obtuse)");
+                    // Logic asks student to identify
+                    qText = `មុំដែលមានរង្វាស់ $${angle}^\\circ$ ហៅថាមុំអ្វី? (កែង, ស្រួច, ឬ ទាល)`;
+                }
+
+                // --- LESSON 16: PARALLEL/PERPENDICULAR ---
+                else if (lesson === "L16") {
+                   qText = "តើបន្ទាត់ពីរដែលកាត់គ្នាបង្កើតបានមុំកែង ហៅថាបន្ទាត់អ្វី?";
+                }
+
+                // --- LESSON 17: STATISTICS ---
+                else if (lesson === "L17") {
+                    let n1 = r(1, 10), n2 = r(1, 10), n3 = r(1, 10);
+                    qText = `មធ្យមភាគ (Average) នៃពិន្ទុ: ${n1}, ${n2}, ${n3} គឺ...`;
+                }
+
+                container.innerHTML += `<div class="question-box"><strong>${i}.</strong> ${qText}</div>`;
+            }
+            
+            // Re-render math symbols
+            if(window.MathJax) MathJax.typeset();
+        }
+
+        // Initialize on load
+        generate();
+    </script>
+</body>
+</html>
